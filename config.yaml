@@ -1,0 +1,39 @@
+capital:
+  total: 25000
+  sleeve_a_pct: 0.70
+  sleeve_b_pct: 0.30
+  sleeve_a_per_trade_risk_pct: 0.01   # 1% of sleeve per spread
+
+sleeve_a:
+  enabled: true
+  underlying: SPY
+  trend_sma_period: 200
+  confirmation_days: 2
+  structure: put_credit_spread          # or cash_secured_put
+  target_dte_min: 30
+  target_dte_max: 45
+  target_short_delta: 0.25
+  spread_width: 5                       # dollars
+  profit_take_pct: 0.50
+  time_stop_dte: 21
+
+sleeve_b:
+  enabled: true
+  underlying: XLU
+  cash_proxy: SGOV
+  yield_series: DGS10
+  entry_sma_short: 20
+  entry_sma_long: 60
+  entry_roc_period: 63                  # trading days, ~3 months
+  exit_confirm_days: 5
+
+alerts:
+  discord_webhook_env_var: DISCORD_WEBHOOK_URL
+  daily_status_ping: true               # false = only alert on state changes
+  email_fallback_enabled: false
+  timezone: America/New_York
+
+runtime:
+  market_close_offset_minutes: 30       # run 30 min after close
+  max_data_staleness_days: 3            # fail if data older than this
+  log_level: INFO
