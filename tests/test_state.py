@@ -65,7 +65,7 @@ def test_has_run_today_false_for_different_date(tmp_path):
     assert has_run_today("2026-04-23", db_path=db) is False
 
 
-def test_mark_run_idempotent(tmp_path):
+def test_mark_run_allows_multiple_calls_same_date(tmp_path):
     db = str(tmp_path / "state.db")
     mark_run("2026-04-24", success=True,  notes="first run",  db_path=db)
     mark_run("2026-04-24", success=False, notes="second run", db_path=db)
@@ -86,3 +86,13 @@ def test_payload_json_roundtrip(tmp_path):
     save_state("sleeve_a", "2026-04-24", "ON", payload, db_path=db)
     result = get_last_state("sleeve_a", db_path=db)
     assert result["payload"] == payload
+
+
+def test_get_last_state_isolates_sleeves(tmp_path):
+    db = str(tmp_path / "state.db")
+    save_state("sleeve_a", "2026-04-24", "ON",  {"src": "a"}, db_path=db)
+    save_state("sleeve_b", "2026-04-24", "OFF", {"src": "b"}, db_path=db)
+    result = get_last_state("sleeve_a", db_path=db)
+    assert result["sleeve"] == "sleeve_a"
+    assert result["state"] == "ON"
+    assert result["payload"] == {"src": "a"}

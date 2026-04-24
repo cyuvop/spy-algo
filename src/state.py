@@ -1,17 +1,4 @@
-"""
-SQLite-backed persistence for daily regime state and run log.
-
-Schema
-------
-signal_state (sleeve, date PK, state, payload_json)
-run_log      (run_timestamp PK, run_date, success, notes)
-
-Design notes
-------------
-- No global connection; open/close per call (safe for daily runner).
-- All functions create tables on first use via _init_db().
-- payload is stored as JSON text and decoded back to a plain dict on read.
-"""
+"""SQLite persistence for sleeve state and run logs."""
 
 import json
 import sqlite3
@@ -39,9 +26,6 @@ CREATE TABLE IF NOT EXISTS run_log (
 def _init_db(conn: sqlite3.Connection) -> None:
     """Create tables if they do not yet exist."""
     conn.executescript(_DDL)
-
-
-# ── Public API ────────────────────────────────────────────────────────────────
 
 
 def get_last_state(sleeve: str, db_path: str = "data/state.db") -> dict | None:
@@ -104,7 +88,7 @@ def has_run_today(date: str, db_path: str = "data/state.db") -> bool:
 def mark_run(
     date: str,
     success: bool,
-    notes: str = "",
+    notes: str = None,
     db_path: str = "data/state.db",
 ) -> None:
     """Append a row to run_log. run_timestamp is UTC ISO-8601."""
