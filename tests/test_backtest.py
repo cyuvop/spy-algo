@@ -198,15 +198,15 @@ def test_sleeve_a_return_uses_putw_when_on(synthetic_data, test_config):
 # ---------------------------------------------------------------------------
 
 def test_sleeve_a_return_uses_cash_proxy_when_off(synthetic_data, test_config):
-    """When regime is OFF, sleeve A return equals the SGOV cash return."""
+    """When regime is OFF, sleeve A return equals the cash proxy return."""
     df = _run_build(synthetic_data, test_config)
 
-    off_rows = df[df["sleeve_a_state"] == "OFF"].dropna(subset=["return_a", "sgov_return"])
-    assert len(off_rows) > 0, "Expected at least one OFF day with SGOV return"
+    off_rows = df[df["sleeve_a_state"] == "OFF"].dropna(subset=["return_a", "cash_proxy_return"])
+    assert len(off_rows) > 0, "Expected at least one OFF day with cash proxy return"
 
     for idx, row in off_rows.iterrows():
-        assert abs(row["return_a"] - row["sgov_return"]) < 1e-10, (
-            f"On {idx}: return_a={row['return_a']}, sgov_return={row['sgov_return']}"
+        assert abs(row["return_a"] - row["cash_proxy_return"]) < 1e-10, (
+            f"On {idx}: return_a={row['return_a']}, cash_proxy_return={row['cash_proxy_return']}"
         )
 
 
@@ -232,15 +232,15 @@ def test_sleeve_b_return_uses_xlu_when_on(synthetic_data, test_config):
 # ---------------------------------------------------------------------------
 
 def test_sleeve_b_return_uses_cash_when_off(synthetic_data, test_config):
-    """When sleeve B state is OFF, return_b equals cash daily return."""
+    """When sleeve B state is OFF, return_b equals cash proxy daily return."""
     df = _run_build(synthetic_data, test_config)
 
-    off_rows = df[df["sleeve_b_state"] == "OFF"].dropna(subset=["return_b", "sgov_return"])
+    off_rows = df[df["sleeve_b_state"] == "OFF"].dropna(subset=["return_b", "cash_proxy_return"])
     assert len(off_rows) > 0, "Expected at least one sleeve B OFF day"
 
     for idx, row in off_rows.iterrows():
-        assert abs(row["return_b"] - row["sgov_return"]) < 1e-10, (
-            f"On {idx}: return_b={row['return_b']}, sgov_return={row['sgov_return']}"
+        assert abs(row["return_b"] - row["cash_proxy_return"]) < 1e-10, (
+            f"On {idx}: return_b={row['return_b']}, cash_proxy_return={row['cash_proxy_return']}"
         )
 
 

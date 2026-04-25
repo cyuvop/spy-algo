@@ -129,13 +129,31 @@ def build_backtest_df(
     sgov_ret = _daily_ret(sgov) if not (sgov is None or sgov.empty) else pd.Series(dtype=float)
     bil_ret = _daily_ret(bil) if not (bil is None or bil.empty) else pd.Series(dtype=float)
 
+    # ---- Fetch DTB3 (3-month T-bill yield) from FRED — penultimate fallback --
+    logger.info("Fetching DTB3 from FRED")
+    dtb3_daily_ret: pd.Series | None = None
+    try:
+        dtb3_raw = fetch_fred_series("DTB3", start=start)
+        # DTB3 is an annualised yield (e.g. 5.25 = 5.25%); convert to daily return
+        dtb3_ffilled = dtb3_raw.reindex(spy_index).ffill()
+        dtb3_daily_ret = (dtb3_ffilled / 100.0) / 252
+    except EnvironmentError:
+        logger.warning("FRED_API_KEY not set; skipping DTB3 fallback")
+    except Exception as exc:
+        logger.warning("DTB3 fetch failed (%s); skipping DTB3 fallback", exc)
+
     # ---- Cash proxy: best available per day -------------------------------
-    # Priority: SGOV > BIL > flat yield
+    # Priority: SGOV > BIL > DTB3 > flat 0.04/252
     def _cash_proxy(idx: pd.DatetimeIndex) -> pd.Series:
         """Return per-day best cash proxy daily return."""
         result = pd.Series(index=idx, dtype=float)
         # Flat yield fallback first (always available)
         result[:] = 0.04 / 252
+        # DTB3 fills dates where neither SGOV nor BIL have data
+        if dtb3_daily_ret is not None:
+            dtb3_aligned = dtb3_daily_ret.reindex(idx)
+            mask_dtb3 = dtb3_aligned.notna()
+            result[mask_dtb3] = dtb3_aligned[mask_dtb3]
         if not bil_ret.empty:
             bil_aligned = bil_ret.reindex(idx)
             mask_bil = bil_aligned.notna()
