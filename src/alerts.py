@@ -100,20 +100,7 @@ def _format_sleeve_b_field(sleeve_b: dict, changed: list[str]) -> dict:
 
 
 def format_discord_embed(sleeve_a: dict, sleeve_b: dict, changed: list[str]) -> dict:
-    """
-    Build a Discord webhook payload with rich embeds.
-
-    sleeve_a and sleeve_b are the signal output dicts (matching the shape from signals.py).
-    changed is a list of sleeve names that changed state today, e.g. ["B"] or ["A", "B"] or [].
-
-    Color coding (Discord embed color as integer):
-    - Any sleeve changed to ON:  green (0x00AA00)
-    - Any sleeve changed to OFF: red   (0xCC0000)
-    - No changes:                blue  (0x0066CC)
-
-    If both changed but in different directions, green wins if any went ON.
-    """
-    # Use local time (America/New_York is acceptable per spec when pytz not installed)
+    """Build Discord embed with color (green if any ON, red if any OFF, blue if no changes) and sleeve fields."""
     now = datetime.now()
     date_str = now.strftime("%b %-d, %Y, %-I:%M %p ET")
 
@@ -138,11 +125,7 @@ def format_discord_embed(sleeve_a: dict, sleeve_b: dict, changed: list[str]) -> 
 
 
 def send_discord(payload: dict, webhook_url: str) -> bool:
-    """
-    POST payload to webhook_url as JSON.
-    Retry up to 3 times with exponential backoff (1s, 2s, 4s).
-    Return True on success, False if all retries failed.
-    """
+    """POST JSON payload to webhook with 3 retries and exponential backoff (1s, 2s, 4s). Returns True on success."""
     headers = {"Content-Type": "application/json"}
     max_attempts = 3
 
@@ -170,12 +153,7 @@ def send_discord(payload: dict, webhook_url: str) -> bool:
 
 
 def send_error_alert(error_message: str, webhook_url: str) -> None:
-    """
-    Send a simpler red embed for runtime failures.
-    Title: "⚠️ Signal System Error"
-    Description: error_message
-    Color: red (0xCC0000)
-    """
+    """Send red error embed with title '⚠️ Signal System Error' and error_message as description."""
     payload = {
         "embeds": [
             {

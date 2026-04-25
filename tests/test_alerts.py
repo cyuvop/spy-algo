@@ -78,6 +78,13 @@ def test_format_embed_title_has_new_signal_when_on():
     assert "NEW SIGNAL" in title
 
 
+def test_format_embed_title_has_exit_signal_when_off():
+    sa = {**SLEEVE_A, "state": "OFF", "prior_state": "ON", "changed_today": True}
+    payload = format_discord_embed(sa, SLEEVE_B, changed=["A"])
+    title = payload["embeds"][0]["title"]
+    assert "EXIT SIGNAL" in title
+
+
 def test_format_embed_sleeve_a_field_has_new_badge():
     sleeve_a_changed = {**SLEEVE_A, "state": "ON", "changed_today": True}
     payload = format_discord_embed(sleeve_a_changed, SLEEVE_B, changed=["A"])
