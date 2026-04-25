@@ -80,8 +80,12 @@ def fetch_fred_series(
         series = df.iloc[:, 0]
     else:
         logger.info("Fetching FRED series %s", series_id)
+        import ssl, certifi
         from fredapi import Fred
 
+        ssl._create_default_https_context = lambda: ssl.create_default_context(
+            cafile=certifi.where()
+        )
         fred = Fred(api_key=api_key)
         series = fred.get_series(series_id, observation_start=start)
         series.name = series_id
