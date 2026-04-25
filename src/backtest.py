@@ -317,8 +317,9 @@ def compute_stats(returns: pd.Series) -> dict:
     # Annualised volatility
     ann_vol = returns.std() * np.sqrt(252)
 
-    # Sharpe (0% risk-free)
-    sharpe = cagr / ann_vol if ann_vol != 0 else float("nan")
+    # Sharpe (0% risk-free, arithmetic mean)
+    ann_mean = returns.mean() * 252
+    sharpe = ann_mean / ann_vol if ann_vol > 0 else float("inf")
 
     # Max drawdown
     cum = (1 + returns).cumprod()
@@ -326,13 +327,9 @@ def compute_stats(returns: pd.Series) -> dict:
     drawdown = cum / rolling_max - 1
     max_dd = drawdown.min()
 
-    # Sortino
-    neg_returns = returns[returns < 0]
-    if len(neg_returns) > 0:
-        downside_vol = neg_returns.std() * np.sqrt(252)
-        sortino = cagr / downside_vol if downside_vol != 0 else float("nan")
-    else:
-        sortino = float("nan")
+    # Sortino (correct semi-deviation: squares all returns, keeps negatives)
+    downside_vol = np.sqrt((np.minimum(returns, 0) ** 2).mean() * 252)
+    sortino = cagr / downside_vol if downside_vol > 0 else float("inf")
 
     # Calmar
     calmar = cagr / abs(max_dd) if max_dd != 0 else float("nan")
@@ -425,10 +422,10 @@ def plot_equity_curves(curves: dict, out_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def build_summary_md(all_stats: dict) -> str:
-    def _fmt(val, pct=False, neg_pct=False):
+    def _fmt(val, pct=False):
         if val is None or (isinstance(val, float) and np.isnan(val)):
             return "N/A"
-        if pct or neg_pct:
+        if pct:
             return f"{val * 100:.2f}%"
         return f"{val:.2f}"
 

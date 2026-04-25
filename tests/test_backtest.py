@@ -135,7 +135,7 @@ def test_config():
 # Helper: patch all fetchers and run build_backtest_df
 # ---------------------------------------------------------------------------
 
-def _run_build(synthetic_data, test_config, monkeypatch=None, putw_avail=True, sgov_avail=True):
+def _run_build(synthetic_data, test_config, putw_avail=True, sgov_avail=True):
     """
     Import build_backtest_df from src.backtest and run it with mocked fetchers.
     Returns the result DataFrame.
@@ -323,11 +323,7 @@ def test_trade_log_captures_state_changes(synthetic_data, test_config):
     df = _run_build(synthetic_data, test_config)
     log = build_trade_log(df)
 
-    if log.empty:
-        # If no state changes happened in synthetic data that's unusual but not an error
-        # Just verify structure
-        assert "date" in log.columns or len(log) == 0
-        return
+    assert not log.empty, "Expected at least one state change in the trade log"
 
     # Every row in the log must correspond to a date where a sleeve changed
     for _, row in log.iterrows():
