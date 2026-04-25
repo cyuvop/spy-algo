@@ -1,8 +1,4 @@
-"""Daily runner entrypoint for the trading signal system.
-
-Run as:
-    python3 -m src.run_daily
-"""
+"""Daily runner entrypoint for the trading signal system. Run as: python3 -m src.run_daily"""
 
 import os
 import sys
@@ -18,16 +14,10 @@ logger = get_logger(__name__)
 
 
 def main() -> None:
-    # -----------------------------------------------------------------------
-    # 1. Bootstrap
-    # -----------------------------------------------------------------------
     load_env()
     config = load_config("config.yaml")
     today = date.today().strftime("%Y-%m-%d")
 
-    # -----------------------------------------------------------------------
-    # 2. Early-exit guards (before any network I/O)
-    # -----------------------------------------------------------------------
     if not is_market_day(today):
         logger.info("Not a market day, exiting.")
         sys.exit(0)
@@ -39,13 +29,9 @@ def main() -> None:
     # webhook_url is needed in the error handler below, so resolve it early
     webhook_url = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
-    # -----------------------------------------------------------------------
-    # 3. Main pipeline wrapped in a single try/except
-    # -----------------------------------------------------------------------
     try:
         two_years_ago = (date.today() - timedelta(days=730)).strftime("%Y-%m-%d")
 
-        # Step 6: Fetch data
         logger.info("Fetching SPY prices…")
         spy = fetch_prices("SPY", start=two_years_ago)
 
@@ -55,7 +41,6 @@ def main() -> None:
         logger.info("Fetching DGS10 (10Y Treasury yield)…")
         ten_yr = fetch_fred_series("DGS10", start=two_years_ago)
 
-        # Step 7: Validate staleness
         max_staleness = config["runtime"]["max_data_staleness_days"]
         staleness_cutoff = date.today() - timedelta(days=max_staleness)
         last_spy_date = spy.index[-1].date()
@@ -71,14 +56,12 @@ def main() -> None:
             mark_run(today, success=False, notes=msg)
             sys.exit(1)
 
-        # Step 8: Compute signals
         logger.info("Computing sleeve A signal…")
         sig_a = compute_sleeve_a(spy, config).iloc[-1].to_dict()
 
         logger.info("Computing sleeve B signal…")
         sig_b = compute_sleeve_b(ten_yr, xlu, config).iloc[-1].to_dict()
 
-        # Step 9: Determine what changed
         prior_a = get_last_state("A")
         prior_b = get_last_state("B")
 
@@ -90,17 +73,17 @@ def main() -> None:
 
         logger.info("State changes: %s", changed if changed else "none")
 
-        # Step 10: Send alert
         if changed or config["alerts"]["daily_status_ping"]:
-            payload = format_discord_embed(sig_a, sig_b, changed)
-            send_discord(payload, webhook_url)
+            if webhook_url:
+                payload = format_discord_embed(sig_a, sig_b, changed)
+                send_discord(payload, webhook_url)
+            else:
+                logger.warning("DISCORD_WEBHOOK_URL not set; skipping alert.")
 
-        # Step 11: Persist state and log run
         save_state("A", today, sig_a["state"], sig_a)
         save_state("B", today, sig_b["state"], sig_b)
         mark_run(today, success=True)
 
-        # Step 12: Summary and exit 0
         logger.info(
             "Run complete. Sleeve A: %s | Sleeve B: %s | Changed: %s",
             sig_a["state"],

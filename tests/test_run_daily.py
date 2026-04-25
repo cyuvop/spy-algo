@@ -1,6 +1,7 @@
 """Tests for src/run_daily.py — daily runner entrypoint."""
 
 import sys
+from contextlib import contextmanager
 from datetime import date, timedelta
 from unittest.mock import MagicMock, patch, call
 import pandas as pd
@@ -129,6 +130,31 @@ def _patch_all(**overrides):
     """Return a dict of patches with optional overrides."""
     patches = {**BASE_PATCHES, **overrides}
     return patches
+
+
+@contextmanager
+def _apply_patches(patches: dict):
+    """Apply multiple patches and reload the module fresh each time."""
+    # Remove cached module so patches take effect cleanly
+    for mod in list(sys.modules.keys()):
+        if "run_daily" in mod:
+            del sys.modules[mod]
+
+    with patch.dict("os.environ", {"DISCORD_WEBHOOK_URL": "https://discord.example.com/webhook"}):
+        active = []
+        try:
+            for target, mock_obj in patches.items():
+                p = patch(target, mock_obj)
+                p.start()
+                active.append(p)
+            yield
+        finally:
+            for p in reversed(active):
+                p.stop()
+            # Clean up module cache after test
+            for mod in list(sys.modules.keys()):
+                if "run_daily" in mod:
+                    del sys.modules[mod]
 
 
 # ---------------------------------------------------------------------------
@@ -285,39 +311,9 @@ class TestStateHandling:
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 1
+            send_error_mock.assert_called_once()
             mark_run_mock.assert_called_once()
             args = mark_run_mock.call_args
             success = args[1].get("success") if args[1] else args[0][1]
             assert success is False
 
-
-# ---------------------------------------------------------------------------
-# Patch context manager helper
-# ---------------------------------------------------------------------------
-
-from contextlib import contextmanager
-
-
-@contextmanager
-def _apply_patches(patches: dict):
-    """Apply multiple patches and reload the module fresh each time."""
-    # Remove cached module so patches take effect cleanly
-    for mod in list(sys.modules.keys()):
-        if "run_daily" in mod:
-            del sys.modules[mod]
-
-    with patch.dict("os.environ", {"DISCORD_WEBHOOK_URL": "https://discord.example.com/webhook"}):
-        active = []
-        try:
-            for target, mock_obj in patches.items():
-                p = patch(target, mock_obj)
-                p.start()
-                active.append(p)
-            yield
-        finally:
-            for p in reversed(active):
-                p.stop()
-            # Clean up module cache after test
-            for mod in list(sys.modules.keys()):
-                if "run_daily" in mod:
-                    del sys.modules[mod]
